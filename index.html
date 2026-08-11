@@ -70,6 +70,11 @@
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(142,47,110,.65)}
     70%{box-shadow:0 0 0 18px rgba(142,47,110,0)}100%{box-shadow:0 0 0 0 rgba(142,47,110,0)}}
 
+  body.portrait #rotate{display:block}
+  #rotate{display:none;position:absolute;left:50%;bottom:118px;transform:translateX(-50%);
+    z-index:7;font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:.5;
+    white-space:nowrap;pointer-events:none}
+
   #hint{position:absolute;left:50%;top:52%;transform:translateX(-50%);z-index:6;
     font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:0;
     pointer-events:none;transition:opacity .6s;text-shadow:0 2px 12px #000}
@@ -107,6 +112,7 @@
   <button id="fs"   aria-label="Fullscreen">&#9974;</button>
 </div>
 
+<div id="rotate">rotate your device for full screen</div>
 <div id="hint">drag to look · scroll to zoom</div>
 <nav id="strip"></nav>
 
@@ -149,8 +155,51 @@ const SCENES = [
 ];
 
 const D = Math.PI/180, R = 180/Math.PI;
-const vfovOf = (hfov, a) => 2*Math.atan(Math.tan(hfov/2*D)/a)*R;
-const maxHfovOf = (s, a) => Math.min(s.haov, 2*Math.atan(Math.tan(s.vaov/2*D)*a)*R);
+
+/* --- exact full-bleed solver ------------------------------------------------
+   A rectangular region of the sphere (haov x vaov) does NOT project to a
+   rectangle on screen. Under a rectilinear projection tilted by the camera
+   pitch it bows, so the viewport CORNERS reach further in latitude than the
+   edge centres. Assuming a rectangle leaves black wedges in the corners of
+   steeply pitched scenes.
+
+   So: walk the viewport border, map every sample back to (lon,lat), and demand
+   all of them land inside the tile. Then binary-search the largest hfov and the
+   largest pan offsets that still satisfy it. Exact, and ~1 ms.
+---------------------------------------------------------------------------- */
+const BORDER = (()=>{ const p=[], N=14;
+  for (let i=0;i<=N;i++){ const t=-1+2*i/N; p.push([t,-1],[t,1],[-1,t],[1,t]); }
+  return p; })();
+
+function fits(s, hfov, aspect, yaw0, pitch0){
+  if (hfov <= 0.5) return false;
+  const th = Math.tan(hfov/2*D), tv = th/aspect;
+  const p0 = pitch0*D, cp = Math.cos(p0), sp = Math.sin(p0);
+  const loLat = s.vOffset - s.vaov/2, hiLat = s.vOffset + s.vaov/2, e = 1e-4;
+  for (let i=0;i<BORDER.length;i++){
+    const dx = BORDER[i][0]*th, dy = BORDER[i][1]*tv, dz = 1;
+    const yw = dy*cp + dz*sp, zw = -dy*sp + dz*cp;
+    const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    const lat = Math.asin(yw/len)*R;
+    const lon = Math.atan2(dx, zw)*R + yaw0;
+    if (Math.abs(lon) > s.haov/2 - e) return false;
+    if (lat > hiLat - e || lat < loLat + e) return false;
+  }
+  return true;
+}
+function solve(test, hiStart){
+  if (test(hiStart)) return hiStart;
+  let lo = 0, hi = hiStart;
+  for (let i=0;i<24;i++){ const m=(lo+hi)/2; if (test(m)) lo=m; else hi=m; }
+  return lo;
+}
+const fitMaxHfov = (s,a)=> solve(h=>fits(s,h,a,0,s.vOffset), s.haov);
+function fitPan(s, hfov, a){
+  const dy = solve(d=>fits(s,hfov,a, d,s.vOffset) && fits(s,hfov,a,-d,s.vOffset), s.haov/2);
+  const up = solve(d=>fits(s,hfov,a,0,s.vOffset+d), s.vaov/2);
+  const dn = solve(d=>fits(s,hfov,a,0,s.vOffset-d), s.vaov/2);
+  return { dy, up, dn };
+}
 
 const cfg = { default:{ firstScene:SCENES[0].id, autoLoad:true, showControls:false,
                         sceneFadeDuration:850, friction:0.15, keyboardZoom:true,
@@ -178,26 +227,33 @@ function applyBounds(recentre){
   const s = SCENES[idx];
   const el = document.getElementById("pano");
   const a  = el.clientWidth / el.clientHeight;
-  const maxH = maxHfovOf(s, a);
+  if (!a || !isFinite(a)) return;
 
-  viewer.setHfovBounds([10, maxH], false);
+  /* Portrait phones: filling a tall viewport from a wide short render would
+     demand ~11 deg hfov — a sliver of the building. Below this threshold we
+     switch to contain: fit the full width and let the dark theme colour band
+     the top and bottom. Deliberate, not broken, and never blurred. */
+  let maxH = fitMaxHfov(s, a);
+  const contain = maxH < s.haov * 0.55;
+  if (contain) maxH = s.haov * 0.985;
+  document.body.classList.toggle("portrait", contain);
+
+  viewer.setHfovBounds([Math.min(9, maxH*0.35), maxH], false);
   let h = viewer.getHfov();
-  if (h > maxH){ h = maxH; viewer.setHfov(maxH, false); }
+  if (!(h <= maxH)) { h = maxH; viewer.setHfov(maxH, false); }
 
-  const v  = vfovOf(h, a);
-  const dy = Math.max(0, (s.haov - h) / 2);
-  const dp = Math.max(0, (s.vaov - v) / 2);
+  const pan = contain ? { dy:0, up:0, dn:0 } : fitPan(s, h, a);
+  viewer.setYawBounds([-pan.dy, pan.dy]);
+  viewer.setPitchBounds([s.vOffset - pan.dn, s.vOffset + pan.up]);
 
-  viewer.setYawBounds([-dy, dy]);
-  viewer.setPitchBounds([s.vOffset - dp, s.vOffset + dp]);
-
-  if (recentre){ viewer.setHfov(maxH, false); viewer.setYaw(0, false); viewer.setPitch(s.vOffset, false); }
-  else {
-    if (viewer.getYaw()   >  dy) viewer.setYaw(dy, false);
-    if (viewer.getYaw()   < -dy) viewer.setYaw(-dy, false);
-    const p = viewer.getPitch();
-    if (p > s.vOffset+dp) viewer.setPitch(s.vOffset+dp, false);
-    if (p < s.vOffset-dp) viewer.setPitch(s.vOffset-dp, false);
+  if (recentre){
+    viewer.setHfov(maxH, false); viewer.setYaw(0, false); viewer.setPitch(s.vOffset, false);
+  } else {
+    const y = viewer.getYaw(), p = viewer.getPitch();
+    if (y >  pan.dy) viewer.setYaw( pan.dy, false);
+    if (y < -pan.dy) viewer.setYaw(-pan.dy, false);
+    if (p > s.vOffset + pan.up) viewer.setPitch(s.vOffset + pan.up, false);
+    if (p < s.vOffset - pan.dn) viewer.setPitch(s.vOffset - pan.dn, false);
   }
 }
 
