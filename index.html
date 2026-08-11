@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui">
+<title>CUTIS INTERNATIONAL HOSPITALS — Exterior</title>
+<meta name="description" content="Interactive exterior tour — CUTIS International Hospitals.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+<style>
+  :root{
+    --brand:#8e2f6e; --ink:#0b0a0f; --txt:#f4f0f6;
+    --glass:rgba(12,10,16,.55); --edge:rgba(255,255,255,.13);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:var(--ink);overflow:hidden;color:var(--txt);
+    font:400 15px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif}
+  #pano{position:absolute;inset:0}
+  .pnlm-container{background:var(--ink)!important}
+  .pnlm-load-box,.pnlm-lbox{background:var(--ink)!important}
+
+  /* ---- top bar ---- */
+  #top{position:absolute;top:0;left:0;right:0;z-index:6;pointer-events:none;
+    padding:18px 22px;display:flex;align-items:center;gap:14px;
+    background:linear-gradient(to bottom,rgba(0,0,0,.6),rgba(0,0,0,0))}
+  #top .mark{font:700 15px/1 inherit;letter-spacing:.26em;color:#fff;white-space:nowrap}
+  #top .sub{font-size:9.5px;letter-spacing:.32em;opacity:.6;white-space:nowrap}
+  #now{margin-left:auto;text-align:right}
+  #now b{display:block;font:600 12px/1.3 inherit;letter-spacing:.16em;text-transform:uppercase}
+  #now span{font-size:10px;letter-spacing:.14em;opacity:.55}
+
+  /* ---- bottom filmstrip ---- */
+  #strip{position:absolute;bottom:0;left:0;right:0;z-index:6;
+    display:flex;gap:10px;justify-content:center;align-items:flex-end;
+    padding:0 16px 18px;overflow-x:auto;scrollbar-width:none;
+    background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,0))}
+  #strip::-webkit-scrollbar{display:none}
+  .thumb{position:relative;flex:0 0 auto;width:132px;height:74px;border-radius:5px;
+    overflow:hidden;cursor:pointer;border:1.5px solid rgba(255,255,255,.16);
+    background-size:cover;background-position:center;opacity:.62;
+    transition:opacity .25s,border-color .25s,transform .25s}
+  .thumb:hover{opacity:.9;transform:translateY(-2px)}
+  .thumb.on{opacity:1;border-color:var(--brand);box-shadow:0 6px 22px rgba(0,0,0,.55)}
+  .thumb i{position:absolute;left:0;right:0;bottom:0;padding:14px 7px 5px;
+    font:600 9px/1.25 inherit;font-style:normal;letter-spacing:.1em;text-transform:uppercase;
+    background:linear-gradient(to top,rgba(0,0,0,.85),transparent)}
+  .thumb u{position:absolute;top:5px;left:6px;font:700 9px/1 inherit;
+    text-decoration:none;opacity:.75}
+
+  /* ---- controls ---- */
+  #ctl{position:absolute;right:22px;top:50%;transform:translateY(-50%);z-index:6;
+    display:flex;flex-direction:column;gap:7px}
+  #ctl button{width:38px;height:38px;border:1px solid var(--edge);border-radius:50%;
+    background:var(--glass);backdrop-filter:blur(12px);color:var(--txt);
+    font-size:14px;cursor:pointer;display:grid;place-items:center;transition:.16s}
+  #ctl button:hover{background:var(--brand);border-color:var(--brand);color:#fff}
+  #ctl button.active{background:var(--brand);border-color:var(--brand);color:#fff}
+
+  .step{position:absolute;top:50%;transform:translateY(-50%);z-index:6;
+    width:46px;height:46px;border:1px solid var(--edge);border-radius:50%;
+    background:var(--glass);backdrop-filter:blur(12px);color:var(--txt);
+    cursor:pointer;font-size:17px;display:grid;place-items:center;transition:.16s}
+  .step:hover{background:var(--brand);border-color:var(--brand);color:#fff}
+  #prev{left:22px} #next{left:78px}
+
+  /* ---- hotspot ---- */
+  .hs{width:36px;height:36px;border-radius:50%;background:rgba(142,47,110,.92);
+    border:2px solid #fff;display:grid;place-items:center;color:#fff;
+    font:700 15px/1 inherit;animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(142,47,110,.65)}
+    70%{box-shadow:0 0 0 18px rgba(142,47,110,0)}100%{box-shadow:0 0 0 0 rgba(142,47,110,0)}}
+
+  #hint{position:absolute;left:50%;top:52%;transform:translateX(-50%);z-index:6;
+    font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:0;
+    pointer-events:none;transition:opacity .6s;text-shadow:0 2px 12px #000}
+  #hint.show{opacity:.7}
+
+  @media (max-width:820px){
+    #top{padding:12px 14px}
+    #top .mark{font-size:12px;letter-spacing:.18em} #top .sub{display:none}
+    #now b{font-size:10px} #now span{display:none}
+    .thumb{width:96px;height:56px}
+    #ctl{right:10px;gap:6px} #ctl button{width:34px;height:34px}
+    .step{width:38px;height:38px} #prev{left:10px} #next{left:56px}
+  }
+</style>
+</head>
+<body>
+
+<div id="pano"></div>
+
+<div id="top">
+  <div>
+    <div class="mark">CUTIS INTERNATIONAL</div>
+    <div class="sub">HOSPITALS &nbsp;·&nbsp; EXTERIOR TOUR</div>
+  </div>
+  <div id="now"><b></b><span></span></div>
+</div>
+
+<button class="step" id="prev" aria-label="Previous">&#10094;</button>
+<button class="step" id="next" aria-label="Next">&#10095;</button>
+
+<div id="ctl">
+  <button id="zin"  aria-label="Zoom in">&plus;</button>
+  <button id="zout" aria-label="Zoom out">&minus;</button>
+  <button id="rot"  aria-label="Auto rotate">&#9654;</button>
+  <button id="fs"   aria-label="Fullscreen">&#9974;</button>
+</div>
+
+<div id="hint">drag to look · scroll to zoom</div>
+<nav id="strip"></nav>
+
+<script>
+/* ============================================================================
+   CUTIS INTERNATIONAL — EXTERIOR TOUR
+
+   Each scene is a PARTIAL equirectangular tile reprojected from the original
+   6144 px rectilinear render (154 px/degree — about 7x the angular detail of a
+   full 8K spherical panorama).
+
+   FULL-BLEED GUARANTEE
+   --------------------
+   The viewer is hard-bounded so image edges can never enter frame:
+
+     vfov(hfov) = 2*atan( tan(hfov/2) / aspect )
+     maxHfov    = min( haov , 2*atan( tan(vaov/2) * aspect ) )
+     yaw  in [ -(haov - hfov)/2 , +(haov - hfov)/2 ]
+     pitch in [ vOffset-(vaov-vfov)/2 , vOffset+(vaov-vfov)/2 ]
+
+   Bounds are recomputed on load, on zoom and on every resize, so the render
+   fills the viewport edge to edge at all times — no letterbox, no grey, no
+   blurred backdrop, at any window size or on any device.
+============================================================================ */
+
+const INTERIOR = "https://ktnavin0110-alt.github.io/MAXILOFOLIX--RECEPTION-WAITING-AREA/";
+
+const SCENES = [
+  { id:"front", n:"01", title:"Front Elevation", sub:"Main Entrance & Signage",
+    img:"./front.jpg",          haov:40.0, vaov:21.86, vOffset:-2,
+    spots:[{yaw:-0.5, pitch:-3.4, txt:"Enter Reception & Waiting Area", url:INTERIOR}] },
+  { id:"aerial-front", n:"02", title:"Aerial — Front", sub:"Site & Approach",
+    img:"./aerial-front.jpg",   haov:65.0, vaov:33.76, vOffset:-32 },
+  { id:"aerial-context", n:"03", title:"Aerial — Wide", sub:"Neighbourhood Context",
+    img:"./aerial-context.jpg", haov:60.0, vaov:31.18, vOffset:-18 },
+  { id:"rear-parking", n:"04", title:"Rear — Car Park", sub:"Parking & Café Terrace",
+    img:"./rear-parking.jpg",   haov:55.0, vaov:29.23, vOffset:-24 },
+  { id:"rear-entrance", n:"05", title:"Rear — Access", sub:"Service Entrance",
+    img:"./rear-entrance.jpg",  haov:60.0, vaov:31.18, vOffset:-35 }
+];
+
+const D = Math.PI/180, R = 180/Math.PI;
+const vfovOf = (hfov, a) => 2*Math.atan(Math.tan(hfov/2*D)/a)*R;
+const maxHfovOf = (s, a) => Math.min(s.haov, 2*Math.atan(Math.tan(s.vaov/2*D)*a)*R);
+
+const cfg = { default:{ firstScene:SCENES[0].id, autoLoad:true, showControls:false,
+                        sceneFadeDuration:850, friction:0.15, keyboardZoom:true,
+                        backgroundColor:[0.043,0.039,0.059], crossOrigin:"anonymous" },
+              scenes:{} };
+
+SCENES.forEach(s=>{
+  cfg.scenes[s.id] = {
+    type:"equirectangular", panorama:s.img,
+    haov:s.haov, vaov:s.vaov, vOffset:s.vOffset,
+    yaw:0, pitch:s.vOffset, hfov:s.haov, minHfov:10, maxHfov:s.haov,
+    hotSpots:(s.spots||[]).map(h=>({
+      pitch:h.pitch, yaw:h.yaw, type:"info", URL:h.url, cssClass:"hs",
+      createTooltipFunc:(el,a)=>{ el.classList.add("hs"); el.innerHTML="&#8594;"; el.title=a; },
+      createTooltipArgs:h.txt
+    }))
+  };
+});
+
+const viewer = pannellum.viewer("pano", cfg);
+let idx = 0, rotating = false;
+
+/* ---- the full-bleed bound solver ---------------------------------------- */
+function applyBounds(recentre){
+  const s = SCENES[idx];
+  const el = document.getElementById("pano");
+  const a  = el.clientWidth / el.clientHeight;
+  const maxH = maxHfovOf(s, a);
+
+  viewer.setHfovBounds([10, maxH], false);
+  let h = viewer.getHfov();
+  if (h > maxH){ h = maxH; viewer.setHfov(maxH, false); }
+
+  const v  = vfovOf(h, a);
+  const dy = Math.max(0, (s.haov - h) / 2);
+  const dp = Math.max(0, (s.vaov - v) / 2);
+
+  viewer.setYawBounds([-dy, dy]);
+  viewer.setPitchBounds([s.vOffset - dp, s.vOffset + dp]);
+
+  if (recentre){ viewer.setHfov(maxH, false); viewer.setYaw(0, false); viewer.setPitch(s.vOffset, false); }
+  else {
+    if (viewer.getYaw()   >  dy) viewer.setYaw(dy, false);
+    if (viewer.getYaw()   < -dy) viewer.setYaw(-dy, false);
+    const p = viewer.getPitch();
+    if (p > s.vOffset+dp) viewer.setPitch(s.vOffset+dp, false);
+    if (p < s.vOffset-dp) viewer.setPitch(s.vOffset-dp, false);
+  }
+}
+
+viewer.on("load", ()=>{ applyBounds(true); flashHint(); });
+viewer.on("zoomchange", ()=>requestAnimationFrame(()=>applyBounds(false)));
+window.addEventListener("resize", ()=>requestAnimationFrame(()=>applyBounds(false)));
+setInterval(()=>applyBounds(false), 900);          // belt and braces
+
+/* ---- filmstrip ---------------------------------------------------------- */
+const strip = document.getElementById("strip");
+SCENES.forEach((s,i)=>{
+  const b = document.createElement("div");
+  b.className = "thumb"; b.style.backgroundImage = `url("${s.img}")`;
+  b.innerHTML = `<u>${s.n}</u><i>${s.title}</i>`;
+  b.onclick = ()=>go(i);
+  strip.appendChild(b);
+});
+
+function go(i){
+  idx = (i + SCENES.length) % SCENES.length;
+  if (rotating) viewer.stopAutoRotate();
+  viewer.loadScene(SCENES[idx].id);
+  paint();
+  if (rotating) setTimeout(()=>viewer.startAutoRotate(-1.4), 900);
+}
+function paint(){
+  [...strip.children].forEach((b,i)=>b.classList.toggle("on", i===idx));
+  document.querySelector("#now b").textContent = SCENES[idx].title;
+  document.querySelector("#now span").textContent = SCENES[idx].sub;
+  const on = strip.children[idx];
+  if (on && on.scrollIntoView) on.scrollIntoView({inline:"center", block:"nearest", behavior:"smooth"});
+}
+let hintT;
+function flashHint(){
+  const h = document.getElementById("hint");
+  h.classList.add("show"); clearTimeout(hintT);
+  hintT = setTimeout(()=>h.classList.remove("show"), 2600);
+}
+
+document.getElementById("next").onclick = ()=>go(idx+1);
+document.getElementById("prev").onclick = ()=>go(idx-1);
+document.getElementById("zin").onclick  = ()=>viewer.setHfov(viewer.getHfov()-7);
+document.getElementById("zout").onclick = ()=>viewer.setHfov(viewer.getHfov()+7);
+document.getElementById("fs").onclick   = ()=>viewer.toggleFullscreen();
+const rotB = document.getElementById("rot");
+rotB.onclick = ()=>{
+  rotating = !rotating;
+  if (rotating){ viewer.startAutoRotate(-1.4); rotB.innerHTML="&#10074;&#10074;"; rotB.classList.add("active"); }
+  else { viewer.stopAutoRotate(); rotB.innerHTML="&#9654;"; rotB.classList.remove("active"); }
+};
+addEventListener("keydown", e=>{
+  if (e.key==="ArrowRight" && e.shiftKey) go(idx+1);
+  else if (e.key==="ArrowLeft" && e.shiftKey) go(idx-1);
+  else if (e.key==="f") viewer.toggleFullscreen();
+});
+
+paint();
+</script>
+</body>
+</html>
