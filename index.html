@@ -2,108 +2,134 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui">
-<title>CUTIS INTERNATIONAL HOSPITALS — Exterior</title>
-<meta name="description" content="Interactive exterior tour — CUTIS International Hospitals.">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>CUTIS INTERNATIONAL HOSPITAL — Exterior Tour</title>
+<meta name="description" content="Interactive exterior tour — CUTIS International Hospital.">
+<meta name="theme-color" content="#0b0a0f">
+<meta property="og:title" content="CUTIS INTERNATIONAL HOSPITAL — Exterior Tour">
+<meta property="og:description" content="Interactive exterior tour — CUTIS International Hospital.">
+<meta property="og:image" content="front.jpg">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
 <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 <style>
   :root{
     --brand:#8e2f6e; --ink:#0b0a0f; --txt:#f4f0f6;
     --glass:rgba(12,10,16,.55); --edge:rgba(255,255,255,.13);
+    --safeT:env(safe-area-inset-top,0px); --safeB:env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;background:var(--ink);overflow:hidden;color:var(--txt);
+    overscroll-behavior:none;
     font:400 15px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif}
+
+  /* stage carries the swipe transform; pano is the pannellum canvas */
+  #stage{position:absolute;inset:0;will-change:transform,opacity;touch-action:none}
+  #stage.snap{transition:transform .34s cubic-bezier(.22,.61,.36,1),opacity .34s}
+  #stage.out {transition:transform .24s ease-in,opacity .24s ease-in}
   #pano{position:absolute;inset:0}
   .pnlm-container{background:var(--ink)!important}
-  .pnlm-load-box,.pnlm-lbox{background:var(--ink)!important}
+  .pnlm-load-box,.pnlm-lbox,.pnlm-loading-box{background:var(--ink)!important}
 
   /* ---- top bar ---- */
   #top{position:absolute;top:0;left:0;right:0;z-index:6;pointer-events:none;
-    padding:18px 22px;display:flex;align-items:center;gap:14px;
-    background:linear-gradient(to bottom,rgba(0,0,0,.6),rgba(0,0,0,0))}
-  #top .mark{font:700 15px/1 inherit;letter-spacing:.26em;color:#fff;white-space:nowrap}
-  #top .sub{font-size:9.5px;letter-spacing:.32em;opacity:.6;white-space:nowrap}
-  #now{margin-left:auto;text-align:right}
+    padding:calc(16px + var(--safeT)) 22px 20px;display:flex;align-items:flex-start;gap:14px;
+    background:linear-gradient(to bottom,rgba(0,0,0,.62),rgba(0,0,0,0))}
+  #top .mark{font:700 15px/1.15 inherit;letter-spacing:.24em;color:#fff}
+  #top .sub{margin-top:4px;font-size:9.5px;letter-spacing:.3em;opacity:.6}
+  #now{margin-left:auto;text-align:right;flex:0 0 auto}
   #now b{display:block;font:600 12px/1.3 inherit;letter-spacing:.16em;text-transform:uppercase}
   #now span{font-size:10px;letter-spacing:.14em;opacity:.55}
 
-  /* ---- bottom filmstrip ---- */
+  /* ---- progress dots ---- */
+  #dots{position:absolute;left:0;right:0;bottom:calc(112px + var(--safeB));z-index:6;
+    display:flex;gap:7px;justify-content:center;pointer-events:none}
+  #dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.35);
+    transition:.3s}
+  #dots i.on{background:var(--brand);width:20px;border-radius:3px}
+
+  /* ---- filmstrip ---- */
   #strip{position:absolute;bottom:0;left:0;right:0;z-index:6;
     display:flex;gap:10px;justify-content:center;align-items:flex-end;
-    padding:0 16px 18px;overflow-x:auto;scrollbar-width:none;
-    background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,0))}
+    padding:0 16px calc(18px + var(--safeB));overflow-x:auto;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    background:linear-gradient(to top,rgba(0,0,0,.75),rgba(0,0,0,0))}
   #strip::-webkit-scrollbar{display:none}
-  .thumb{position:relative;flex:0 0 auto;width:132px;height:74px;border-radius:5px;
+  .thumb{position:relative;flex:0 0 auto;width:128px;height:72px;border-radius:5px;
     overflow:hidden;cursor:pointer;border:1.5px solid rgba(255,255,255,.16);
-    background-size:cover;background-position:center;opacity:.62;
+    background-size:cover;background-position:center;opacity:.6;
     transition:opacity .25s,border-color .25s,transform .25s}
-  .thumb:hover{opacity:.9;transform:translateY(-2px)}
+  .thumb:hover{opacity:.92;transform:translateY(-2px)}
   .thumb.on{opacity:1;border-color:var(--brand);box-shadow:0 6px 22px rgba(0,0,0,.55)}
   .thumb i{position:absolute;left:0;right:0;bottom:0;padding:14px 7px 5px;
-    font:600 9px/1.25 inherit;font-style:normal;letter-spacing:.1em;text-transform:uppercase;
-    background:linear-gradient(to top,rgba(0,0,0,.85),transparent)}
+    font:600 9px/1.25 inherit;font-style:normal;letter-spacing:.09em;text-transform:uppercase;
+    background:linear-gradient(to top,rgba(0,0,0,.88),transparent)}
   .thumb u{position:absolute;top:5px;left:6px;font:700 9px/1 inherit;
-    text-decoration:none;opacity:.75}
+    text-decoration:none;opacity:.7}
 
   /* ---- controls ---- */
-  #ctl{position:absolute;right:22px;top:50%;transform:translateY(-50%);z-index:6;
+  #ctl{position:absolute;right:20px;top:50%;transform:translateY(-50%);z-index:6;
     display:flex;flex-direction:column;gap:7px}
-  #ctl button{width:38px;height:38px;border:1px solid var(--edge);border-radius:50%;
+  #ctl button,.step{border:1px solid var(--edge);border-radius:50%;
     background:var(--glass);backdrop-filter:blur(12px);color:var(--txt);
-    font-size:14px;cursor:pointer;display:grid;place-items:center;transition:.16s}
-  #ctl button:hover{background:var(--brand);border-color:var(--brand);color:#fff}
-  #ctl button.active{background:var(--brand);border-color:var(--brand);color:#fff}
-
+    cursor:pointer;display:grid;place-items:center;transition:.16s}
+  #ctl button{width:38px;height:38px;font-size:14px}
+  #ctl button:hover,#ctl button.active,.step:hover{background:var(--brand);border-color:var(--brand);color:#fff}
   .step{position:absolute;top:50%;transform:translateY(-50%);z-index:6;
-    width:46px;height:46px;border:1px solid var(--edge);border-radius:50%;
-    background:var(--glass);backdrop-filter:blur(12px);color:var(--txt);
-    cursor:pointer;font-size:17px;display:grid;place-items:center;transition:.16s}
-  .step:hover{background:var(--brand);border-color:var(--brand);color:#fff}
-  #prev{left:22px} #next{left:78px}
+    width:44px;height:44px;font-size:17px}
+  #prev{left:20px} #next{left:74px}
 
-  /* ---- hotspot ---- */
-  .hs{width:36px;height:36px;border-radius:50%;background:rgba(142,47,110,.92);
-    border:2px solid #fff;display:grid;place-items:center;color:#fff;
-    font:700 15px/1 inherit;animation:pulse 2.4s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(142,47,110,.65)}
-    70%{box-shadow:0 0 0 18px rgba(142,47,110,0)}100%{box-shadow:0 0 0 0 rgba(142,47,110,0)}}
+  /* ---- swipe affordances ---- */
+  .edge{position:absolute;top:0;bottom:0;width:88px;z-index:5;pointer-events:none;
+    opacity:0;transition:opacity .18s}
+  #edgeL{left:0;background:linear-gradient(to right,rgba(142,47,110,.55),transparent)}
+  #edgeR{right:0;background:linear-gradient(to left,rgba(142,47,110,.55),transparent)}
+
+  #hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:7;
+    font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:0;
+    pointer-events:none;transition:opacity .6s;text-shadow:0 2px 14px #000;white-space:nowrap}
+  #hint.show{opacity:.78}
 
   body.portrait #rotate{display:block}
-  #rotate{display:none;position:absolute;left:50%;bottom:118px;transform:translateX(-50%);
-    z-index:7;font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:.5;
-    white-space:nowrap;pointer-events:none}
+  #rotate{display:none;position:absolute;left:50%;bottom:calc(132px + var(--safeB));
+    transform:translateX(-50%);z-index:7;font-size:9.5px;letter-spacing:.18em;
+    text-transform:uppercase;opacity:.5;white-space:nowrap;pointer-events:none}
 
-  #hint{position:absolute;left:50%;top:52%;transform:translateX(-50%);z-index:6;
-    font-size:11px;letter-spacing:.2em;text-transform:uppercase;opacity:0;
-    pointer-events:none;transition:opacity .6s;text-shadow:0 2px 12px #000}
-  #hint.show{opacity:.7}
-
-  @media (max-width:820px){
-    #top{padding:12px 14px}
-    #top .mark{font-size:12px;letter-spacing:.18em} #top .sub{display:none}
-    #now b{font-size:10px} #now span{display:none}
-    .thumb{width:96px;height:56px}
-    #ctl{right:10px;gap:6px} #ctl button{width:34px;height:34px}
-    .step{width:38px;height:38px} #prev{left:10px} #next{left:56px}
+  /* ---- phone ---- */
+  @media (max-width:860px){
+    #top{padding:calc(11px + var(--safeT)) 13px 16px}
+    #top .mark{font-size:11px;letter-spacing:.15em} #top .sub{display:none}
+    #now b{font-size:9.5px;letter-spacing:.1em} #now span{display:none}
+    .thumb{width:88px;height:52px} .thumb i{font-size:7.5px;padding:11px 5px 4px}
+    #strip{gap:7px;justify-content:flex-start;padding-left:13px;padding-right:13px}
+    #dots{bottom:calc(84px + var(--safeB))}
+    #ctl{right:9px;gap:6px} #ctl button{width:33px;height:33px;font-size:12px}
+    .step{display:none}
+    #hint{font-size:9.5px;letter-spacing:.16em}
+  }
+  @media (max-width:860px) and (orientation:landscape){
+    .thumb{width:76px;height:44px}
+    #strip{padding-bottom:calc(10px + var(--safeB))}
+    #dots{bottom:calc(70px + var(--safeB))}
   }
 </style>
 </head>
 <body>
 
-<div id="pano"></div>
+<div id="stage"><div id="pano"></div></div>
+
+<div class="edge" id="edgeL"></div>
+<div class="edge" id="edgeR"></div>
 
 <div id="top">
   <div>
     <div class="mark">CUTIS INTERNATIONAL</div>
-    <div class="sub">HOSPITALS &nbsp;·&nbsp; EXTERIOR TOUR</div>
+    <div class="sub">HOSPITAL &nbsp;·&nbsp; EXTERIOR TOUR</div>
   </div>
   <div id="now"><b></b><span></span></div>
 </div>
 
-<button class="step" id="prev" aria-label="Previous">&#10094;</button>
-<button class="step" id="next" aria-label="Next">&#10095;</button>
+<button class="step" id="prev" aria-label="Previous view">&#10094;</button>
+<button class="step" id="next" aria-label="Next view">&#10095;</button>
 
 <div id="ctl">
   <button id="zin"  aria-label="Zoom in">&plus;</button>
@@ -113,60 +139,44 @@
 </div>
 
 <div id="rotate">rotate your device for full screen</div>
-<div id="hint">drag to look · scroll to zoom</div>
+<div id="hint">swipe to move between views</div>
+<div id="dots"></div>
 <nav id="strip"></nav>
 
 <script>
 /* ============================================================================
-   CUTIS INTERNATIONAL — EXTERIOR TOUR
+   CUTIS INTERNATIONAL HOSPITAL — EXTERIOR TOUR
 
-   Each scene is a PARTIAL equirectangular tile reprojected from the original
-   6144 px rectilinear render (154 px/degree — about 7x the angular detail of a
-   full 8K spherical panorama).
+   Scenes are partial equirectangular tiles reprojected from 6144 px rectilinear
+   renders (~154 px/degree, about 7x the angular detail of a full 8K sphere).
 
-   FULL-BLEED GUARANTEE
-   --------------------
-   The viewer is hard-bounded so image edges can never enter frame:
+   FULL-BLEED SOLVER
+   A sphere rectangle does not project to a screen rectangle: under a pitched
+   rectilinear projection it bows, so viewport CORNERS reach further in latitude
+   than edge centres. We therefore walk the viewport border, map each sample back
+   to (lon,lat), and binary-search the largest hfov + pan offsets that keep every
+   sample inside the tile. Recomputed on load, zoom and resize.
 
-     vfov(hfov) = 2*atan( tan(hfov/2) / aspect )
-     maxHfov    = min( haov , 2*atan( tan(vaov/2) * aspect ) )
-     yaw  in [ -(haov - hfov)/2 , +(haov - hfov)/2 ]
-     pitch in [ vOffset-(vaov-vfov)/2 , vOffset+(vaov-vfov)/2 ]
-
-   Bounds are recomputed on load, on zoom and on every resize, so the render
-   fills the viewport edge to edge at all times — no letterbox, no grey, no
-   blurred backdrop, at any window size or on any device.
+   SWIPE
+   Horizontal drag past the pan limit rubber-bands the stage and, past threshold,
+   slides to the neighbouring scene — the same gesture as a native 360 gallery.
+   Where a scene has no pan room at all, any horizontal drag swipes directly.
 ============================================================================ */
-
-const INTERIOR = "https://ktnavin0110-alt.github.io/MAXILOFOLIX--RECEPTION-WAITING-AREA/";
 
 const SCENES = [
   { id:"front", n:"01", title:"Front Elevation", sub:"Main Entrance & Signage",
-    img:"./front.jpg",          haov:40.0, vaov:21.86, vOffset:-2,
-    spots:[{yaw:-0.5, pitch:-3.4, txt:"Enter Reception & Waiting Area", url:INTERIOR}] },
+    img:"front.jpg",          haov:40.0, vaov:21.86, vOffset:-2 },
   { id:"aerial-front", n:"02", title:"Aerial — Front", sub:"Site & Approach",
-    img:"./aerial-front.jpg",   haov:65.0, vaov:33.76, vOffset:-32 },
+    img:"aerial-front.jpg",   haov:65.0, vaov:33.76, vOffset:-32 },
   { id:"aerial-context", n:"03", title:"Aerial — Wide", sub:"Neighbourhood Context",
-    img:"./aerial-context.jpg", haov:60.0, vaov:31.18, vOffset:-18 },
+    img:"aerial-context.jpg", haov:60.0, vaov:31.18, vOffset:-18 },
   { id:"rear-parking", n:"04", title:"Rear — Car Park", sub:"Parking & Café Terrace",
-    img:"./rear-parking.jpg",   haov:55.0, vaov:29.23, vOffset:-24 },
+    img:"rear-parking.jpg",   haov:55.0, vaov:29.23, vOffset:-24 },
   { id:"rear-entrance", n:"05", title:"Rear — Access", sub:"Service Entrance",
-    img:"./rear-entrance.jpg",  haov:60.0, vaov:31.18, vOffset:-35 }
+    img:"rear-entrance.jpg",  haov:60.0, vaov:31.18, vOffset:-35 }
 ];
 
 const D = Math.PI/180, R = 180/Math.PI;
-
-/* --- exact full-bleed solver ------------------------------------------------
-   A rectangular region of the sphere (haov x vaov) does NOT project to a
-   rectangle on screen. Under a rectilinear projection tilted by the camera
-   pitch it bows, so the viewport CORNERS reach further in latitude than the
-   edge centres. Assuming a rectangle leaves black wedges in the corners of
-   steeply pitched scenes.
-
-   So: walk the viewport border, map every sample back to (lon,lat), and demand
-   all of them land inside the tile. Then binary-search the largest hfov and the
-   largest pan offsets that still satisfy it. Exact, and ~1 ms.
----------------------------------------------------------------------------- */
 const BORDER = (()=>{ const p=[], N=14;
   for (let i=0;i<=N;i++){ const t=-1+2*i/N; p.push([t,-1],[t,1],[-1,t],[1,t]); }
   return p; })();
@@ -177,9 +187,9 @@ function fits(s, hfov, aspect, yaw0, pitch0){
   const p0 = pitch0*D, cp = Math.cos(p0), sp = Math.sin(p0);
   const loLat = s.vOffset - s.vaov/2, hiLat = s.vOffset + s.vaov/2, e = 1e-4;
   for (let i=0;i<BORDER.length;i++){
-    const dx = BORDER[i][0]*th, dy = BORDER[i][1]*tv, dz = 1;
-    const yw = dy*cp + dz*sp, zw = -dy*sp + dz*cp;
-    const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    const dx = BORDER[i][0]*th, dy = BORDER[i][1]*tv;
+    const yw = dy*cp + sp, zw = -dy*sp + cp;
+    const len = Math.sqrt(dx*dx + dy*dy + 1);
     const lat = Math.asin(yw/len)*R;
     const lon = Math.atan2(dx, zw)*R + yaw0;
     if (Math.abs(lon) > s.haov/2 - e) return false;
@@ -195,46 +205,36 @@ function solve(test, hiStart){
 }
 const fitMaxHfov = (s,a)=> solve(h=>fits(s,h,a,0,s.vOffset), s.haov);
 function fitPan(s, hfov, a){
-  const dy = solve(d=>fits(s,hfov,a, d,s.vOffset) && fits(s,hfov,a,-d,s.vOffset), s.haov/2);
-  const up = solve(d=>fits(s,hfov,a,0,s.vOffset+d), s.vaov/2);
-  const dn = solve(d=>fits(s,hfov,a,0,s.vOffset-d), s.vaov/2);
-  return { dy, up, dn };
+  return {
+    dy: solve(d=>fits(s,hfov,a, d,s.vOffset) && fits(s,hfov,a,-d,s.vOffset), s.haov/2),
+    up: solve(d=>fits(s,hfov,a,0,s.vOffset+d), s.vaov/2),
+    dn: solve(d=>fits(s,hfov,a,0,s.vOffset-d), s.vaov/2)
+  };
 }
 
 const cfg = { default:{ firstScene:SCENES[0].id, autoLoad:true, showControls:false,
-                        sceneFadeDuration:850, friction:0.15, keyboardZoom:true,
-                        backgroundColor:[0.043,0.039,0.059], crossOrigin:"anonymous" },
+                        sceneFadeDuration:0, friction:0.15, keyboardZoom:true,
+                        draggable:true, backgroundColor:[0.043,0.039,0.059] },
               scenes:{} };
-
 SCENES.forEach(s=>{
-  cfg.scenes[s.id] = {
-    type:"equirectangular", panorama:s.img,
+  cfg.scenes[s.id] = { type:"equirectangular", panorama:s.img,
     haov:s.haov, vaov:s.vaov, vOffset:s.vOffset,
-    yaw:0, pitch:s.vOffset, hfov:s.haov, minHfov:10, maxHfov:s.haov,
-    hotSpots:(s.spots||[]).map(h=>({
-      pitch:h.pitch, yaw:h.yaw, type:"info", URL:h.url, cssClass:"hs",
-      createTooltipFunc:(el,a)=>{ el.classList.add("hs"); el.innerHTML="&#8594;"; el.title=a; },
-      createTooltipArgs:h.txt
-    }))
-  };
+    yaw:0, pitch:s.vOffset, hfov:s.haov, minHfov:9, maxHfov:s.haov, hotSpots:[] };
 });
 
 const viewer = pannellum.viewer("pano", cfg);
-let idx = 0, rotating = false;
+const stage  = document.getElementById("stage");
+let idx = 0, rotating = false, pan = {dy:0, up:0, dn:0};
 
-/* ---- the full-bleed bound solver ---------------------------------------- */
+/* ---------------- bounds ---------------- */
 function applyBounds(recentre){
   const s = SCENES[idx];
   const el = document.getElementById("pano");
   const a  = el.clientWidth / el.clientHeight;
   if (!a || !isFinite(a)) return;
 
-  /* Portrait phones: filling a tall viewport from a wide short render would
-     demand ~11 deg hfov — a sliver of the building. Below this threshold we
-     switch to contain: fit the full width and let the dark theme colour band
-     the top and bottom. Deliberate, not broken, and never blurred. */
   let maxH = fitMaxHfov(s, a);
-  const contain = maxH < s.haov * 0.55;
+  const contain = maxH < s.haov * 0.55;      // tall phone: contain instead of a sliver
   if (contain) maxH = s.haov * 0.985;
   document.body.classList.toggle("portrait", contain);
 
@@ -242,7 +242,7 @@ function applyBounds(recentre){
   let h = viewer.getHfov();
   if (!(h <= maxH)) { h = maxH; viewer.setHfov(maxH, false); }
 
-  const pan = contain ? { dy:0, up:0, dn:0 } : fitPan(s, h, a);
+  pan = contain ? {dy:0, up:0, dn:0} : fitPan(s, h, a);
   viewer.setYawBounds([-pan.dy, pan.dy]);
   viewer.setPitchBounds([s.vOffset - pan.dn, s.vOffset + pan.up]);
 
@@ -256,45 +256,97 @@ function applyBounds(recentre){
     if (p < s.vOffset - pan.dn) viewer.setPitch(s.vOffset - pan.dn, false);
   }
 }
-
-viewer.on("load", ()=>{ applyBounds(true); flashHint(); });
+viewer.on("load", ()=>applyBounds(true));
 viewer.on("zoomchange", ()=>requestAnimationFrame(()=>applyBounds(false)));
-window.addEventListener("resize", ()=>requestAnimationFrame(()=>applyBounds(false)));
-setInterval(()=>applyBounds(false), 900);          // belt and braces
+addEventListener("resize", ()=>requestAnimationFrame(()=>applyBounds(false)));
+addEventListener("orientationchange", ()=>setTimeout(()=>applyBounds(true), 350));
+setInterval(()=>applyBounds(false), 900);
 
-/* ---- filmstrip ---------------------------------------------------------- */
-const strip = document.getElementById("strip");
+/* ---------------- swipe ---------------- */
+let down=false, sx=0, sy=0, over=0, locked=false, axis=null;
+const THRESH = 58;
+const edgeL = document.getElementById("edgeL"), edgeR = document.getElementById("edgeR");
+
+function atEdge(dx){
+  if (pan.dy < 0.06) return true;                    // no pan room -> swipe straight away
+  let y = 0; try { y = viewer.getYaw(); } catch(e){ return true; }
+  if (dx > 0 && y <= -pan.dy + 0.1) return true;     // pushed to the left limit
+  if (dx < 0 && y >=  pan.dy - 0.1) return true;
+  return false;
+}
+function setStage(px){
+  stage.style.transform = px ? `translateX(${px}px)` : "translateX(0)";
+  stage.style.opacity = String(1 - Math.min(Math.abs(px)/500, .28));
+  edgeL.style.opacity = px > 12 ? String(Math.min(px/110, .85)) : "0";
+  edgeR.style.opacity = px < -12 ? String(Math.min(-px/110, .85)) : "0";
+}
+stage.addEventListener("pointerdown", e=>{
+  if (e.button) return;
+  down=true; locked=false; axis=null; over=0; sx=e.clientX; sy=e.clientY;
+  stage.classList.remove("snap");
+}, true);
+addEventListener("pointermove", e=>{
+  if (!down || locked) return;
+  const dx = e.clientX - sx, dy = e.clientY - sy;
+  if (!axis){
+    if (Math.abs(dx) < 9 && Math.abs(dy) < 9) return;
+    axis = Math.abs(dx) > Math.abs(dy) * 1.15 ? "x" : "y";
+  }
+  if (axis !== "x" || !atEdge(dx)){ if (over){ over=0; setStage(0); } return; }
+  over = dx;
+  setStage(Math.sign(dx) * Math.min(Math.abs(dx) * 0.44, 155));
+}, true);
+function release(){
+  if (!down) return; down=false;
+  if (!locked && Math.abs(over) > THRESH){ locked=true; swipeTo(over < 0 ? 1 : -1); }
+  else { stage.classList.add("snap"); setStage(0); }
+  over=0; axis=null;
+}
+addEventListener("pointerup", release, true);
+addEventListener("pointercancel", release, true);
+
+function swipeTo(dir){                                  // dir +1 = next, -1 = prev
+  stage.classList.remove("snap"); stage.classList.add("out");
+  stage.style.transform = `translateX(${-dir*20}%)`; stage.style.opacity = "0";
+  edgeL.style.opacity = edgeR.style.opacity = "0";
+  setTimeout(()=>{
+    go(idx + dir);
+    stage.classList.remove("out");
+    stage.style.transition = "none";
+    stage.style.transform  = `translateX(${dir*20}%)`;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      stage.style.transition = ""; stage.classList.add("snap"); setStage(0);
+    }));
+  }, 235);
+}
+
+/* ---------------- navigation ---------------- */
+const strip = document.getElementById("strip"), dots = document.getElementById("dots");
 SCENES.forEach((s,i)=>{
   const b = document.createElement("div");
   b.className = "thumb"; b.style.backgroundImage = `url("${s.img}")`;
   b.innerHTML = `<u>${s.n}</u><i>${s.title}</i>`;
-  b.onclick = ()=>go(i);
+  b.onclick = ()=>{ if (i!==idx) { const d = i>idx?1:-1; idx = i-d; swipeTo(d); } };
   strip.appendChild(b);
+  dots.appendChild(document.createElement("i"));
 });
-
 function go(i){
   idx = (i + SCENES.length) % SCENES.length;
   if (rotating) viewer.stopAutoRotate();
   viewer.loadScene(SCENES[idx].id);
   paint();
-  if (rotating) setTimeout(()=>viewer.startAutoRotate(-1.4), 900);
+  if (rotating) setTimeout(()=>viewer.startAutoRotate(-1.4), 700);
 }
 function paint(){
   [...strip.children].forEach((b,i)=>b.classList.toggle("on", i===idx));
+  [...dots.children].forEach((d,i)=>d.classList.toggle("on", i===idx));
   document.querySelector("#now b").textContent = SCENES[idx].title;
   document.querySelector("#now span").textContent = SCENES[idx].sub;
   const on = strip.children[idx];
   if (on && on.scrollIntoView) on.scrollIntoView({inline:"center", block:"nearest", behavior:"smooth"});
 }
-let hintT;
-function flashHint(){
-  const h = document.getElementById("hint");
-  h.classList.add("show"); clearTimeout(hintT);
-  hintT = setTimeout(()=>h.classList.remove("show"), 2600);
-}
-
-document.getElementById("next").onclick = ()=>go(idx+1);
-document.getElementById("prev").onclick = ()=>go(idx-1);
+document.getElementById("next").onclick = ()=>swipeTo(1);
+document.getElementById("prev").onclick = ()=>swipeTo(-1);
 document.getElementById("zin").onclick  = ()=>viewer.setHfov(viewer.getHfov()-7);
 document.getElementById("zout").onclick = ()=>viewer.setHfov(viewer.getHfov()+7);
 document.getElementById("fs").onclick   = ()=>viewer.toggleFullscreen();
@@ -305,11 +357,14 @@ rotB.onclick = ()=>{
   else { viewer.stopAutoRotate(); rotB.innerHTML="&#9654;"; rotB.classList.remove("active"); }
 };
 addEventListener("keydown", e=>{
-  if (e.key==="ArrowRight" && e.shiftKey) go(idx+1);
-  else if (e.key==="ArrowLeft" && e.shiftKey) go(idx-1);
+  if (e.key==="ArrowRight" && e.shiftKey) swipeTo(1);
+  else if (e.key==="ArrowLeft" && e.shiftKey) swipeTo(-1);
   else if (e.key==="f") viewer.toggleFullscreen();
 });
 
+const hint = document.getElementById("hint");
+setTimeout(()=>hint.classList.add("show"), 900);
+setTimeout(()=>hint.classList.remove("show"), 4200);
 paint();
 </script>
 </body>
