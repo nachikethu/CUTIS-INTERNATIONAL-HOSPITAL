@@ -23,7 +23,9 @@
     font:400 15px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif}
 
   /* stage carries the swipe transform; pano is the pannellum canvas */
-  #stage{position:absolute;inset:0;will-change:transform,opacity;touch-action:none}
+  #stage{position:absolute;inset:0;will-change:transform,opacity;touch-action:none;
+    cursor:grab}
+  #stage:active,#stage.grabbing{cursor:grabbing}
   #stage.snap{transition:transform .34s cubic-bezier(.22,.61,.36,1),opacity .34s}
   #stage.out {transition:transform .24s ease-in,opacity .24s ease-in}
   #pano{position:absolute;inset:0}
@@ -140,7 +142,7 @@
 </div>
 
 <div id="rotate">rotate your device for full screen</div>
-<div id="hint">swipe to move between views</div>
+<div id="hint">drag to pan &nbsp;·&nbsp; swipe at the edge for the next view</div>
 <div id="dots"></div>
 <nav id="strip"></nav>
 
@@ -177,6 +179,7 @@ const SCENES = [
     img:"rear-entrance.jpg",  haov:60.0, vaov:31.18, vOffset:-35 }
 ];
 
+const FILL = 0.80;          // opening zoom as a fraction of the full-fit view
 const D = Math.PI/180, R = 180/Math.PI;
 const BORDER = (()=>{ const p=[], N=14;
   for (let i=0;i<=N;i++){ const t=-1+2*i/N; p.push([t,-1],[t,1],[-1,t],[1,t]); }
@@ -250,7 +253,11 @@ function applyBounds(recentre){
   viewer.setPitchBounds([s.vOffset - pan.dn, s.vOffset + pan.up]);
 
   if (recentre){
-    viewer.setHfov(maxH, false); viewer.setYaw(0, false); viewer.setPitch(s.vOffset, false);
+    /* Open slightly inside the full-fit view. At exactly 100% fill the render
+       meets all four edges, so pan range is mathematically zero and there is
+       nothing to drag. Opening at FILL leaves real hand-pan room in both axes
+       while still filling the frame; zooming out to 100% remains available. */
+    viewer.setHfov(maxH * FILL, false); viewer.setYaw(0, false); viewer.setPitch(s.vOffset, false);
   } else {
     const y = viewer.getYaw(), p = viewer.getPitch();
     if (y >  pan.dy) viewer.setYaw( pan.dy, false);
@@ -286,7 +293,7 @@ function setStage(px){
 stage.addEventListener("pointerdown", e=>{
   if (e.button) return;
   down=true; locked=false; axis=null; over=0; sx=e.clientX; sy=e.clientY;
-  stage.classList.remove("snap");
+  stage.classList.remove("snap"); stage.classList.add("grabbing");
 }, true);
 addEventListener("pointermove", e=>{
   if (!down || locked) return;
@@ -300,6 +307,7 @@ addEventListener("pointermove", e=>{
   setStage(Math.sign(dx) * Math.min(Math.abs(dx) * 0.44, 155));
 }, true);
 function release(){
+  stage.classList.remove("grabbing");
   if (!down) return; down=false;
   if (!locked && Math.abs(over) > THRESH){ locked=true; swipeTo(over < 0 ? 1 : -1); }
   else { stage.classList.add("snap"); setStage(0); }
