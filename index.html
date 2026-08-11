@@ -256,7 +256,7 @@ function applyBounds(recentre){
     if (p < s.vOffset - pan.dn) viewer.setPitch(s.vOffset - pan.dn, false);
   }
 }
-viewer.on("load", ()=>applyBounds(true));
+viewer.on("load", ()=>{ applyBounds(true); slideIn(); });
 viewer.on("zoomchange", ()=>requestAnimationFrame(()=>applyBounds(false)));
 addEventListener("resize", ()=>requestAnimationFrame(()=>applyBounds(false)));
 addEventListener("orientationchange", ()=>setTimeout(()=>applyBounds(true), 350));
@@ -305,19 +305,40 @@ function release(){
 addEventListener("pointerup", release, true);
 addEventListener("pointercancel", release, true);
 
-function swipeTo(dir){                                  // dir +1 = next, -1 = prev
+/* The transition is driven by the scene-load event rather than a timer chain:
+   slide the current scene out, load, then slide the new one in from the
+   opposite side. A forced reflow (offsetWidth) commits the "off-screen" frame
+   before the transition is re-enabled — more reliable than nested rAFs. A
+   watchdog resets the stage unconditionally in case a load event never fires. */
+let busy = false, pendingDir = 0, watchdog = 0;
+
+function resetStage(){
+  stage.classList.remove("out");
+  stage.style.transition = "";
+  stage.classList.add("snap");
+  setStage(0);
+  pendingDir = 0; busy = false;
+}
+function slideIn(){
+  clearTimeout(watchdog);
+  if (!pendingDir){ resetStage(); return; }
+  const dir = pendingDir;
+  stage.classList.remove("out","snap");
+  stage.style.transition = "none";
+  stage.style.transform  = `translateX(${dir*20}%)`;
+  stage.style.opacity    = "0";
+  void stage.offsetWidth;                        // commit the off-screen frame
+  resetStage();
+}
+function swipeTo(dir){                           // dir +1 = next, -1 = prev
+  if (busy) return;
+  busy = true; pendingDir = dir;
   stage.classList.remove("snap"); stage.classList.add("out");
   stage.style.transform = `translateX(${-dir*20}%)`; stage.style.opacity = "0";
   edgeL.style.opacity = edgeR.style.opacity = "0";
-  setTimeout(()=>{
-    go(idx + dir);
-    stage.classList.remove("out");
-    stage.style.transition = "none";
-    stage.style.transform  = `translateX(${dir*20}%)`;
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      stage.style.transition = ""; stage.classList.add("snap"); setStage(0);
-    }));
-  }, 235);
+  clearTimeout(watchdog);
+  watchdog = setTimeout(resetStage, 1600);       // never leave the stage stuck
+  setTimeout(()=>go(idx + dir), 225);
 }
 
 /* ---------------- navigation ---------------- */
@@ -326,7 +347,7 @@ SCENES.forEach((s,i)=>{
   const b = document.createElement("div");
   b.className = "thumb"; b.style.backgroundImage = `url("${s.img}")`;
   b.innerHTML = `<u>${s.n}</u><i>${s.title}</i>`;
-  b.onclick = ()=>{ if (i!==idx) { const d = i>idx?1:-1; idx = i-d; swipeTo(d); } };
+  b.onclick = ()=>{ if (i!==idx && !busy) { const d = i>idx?1:-1; idx = i-d; swipeTo(d); } };
   strip.appendChild(b);
   dots.appendChild(document.createElement("i"));
 });
