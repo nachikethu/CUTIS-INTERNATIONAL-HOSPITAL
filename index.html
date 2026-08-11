@@ -249,8 +249,14 @@ function applyBounds(recentre){
   if (!(h <= maxH)) { h = maxH; viewer.setHfov(maxH, false); }
 
   pan = fitPan(s, h, a);
-  viewer.setYawBounds([-pan.dy, pan.dy]);
-  viewer.setPitchBounds([s.vOffset - pan.dn, s.vOffset + pan.up]);
+
+  /* Pannellum treats minYaw/maxYaw as limits on the visible EDGE and subtracts
+     half the field of view internally. Passing our already-hfov-adjusted values
+     double-counts and collapses the pannable range to a single point — which is
+     exactly why dragging did nothing. So hand Pannellum the raw image extent and
+     enforce the exact (bow-aware) limits ourselves in guard(), every frame. */
+  viewer.setYawBounds([-s.haov/2, s.haov/2]);
+  viewer.setPitchBounds([s.vOffset - s.vaov/2, s.vOffset + s.vaov/2]);
 
   if (recentre){
     /* Open slightly inside the full-fit view. At exactly 100% fill the render
@@ -266,7 +272,25 @@ function applyBounds(recentre){
     if (p < s.vOffset - pan.dn) viewer.setPitch(s.vOffset - pan.dn, false);
   }
 }
-viewer.on("load", ()=>{ applyBounds(true); slideIn(); });
+/* Per-frame hard stop. Keeps the view inside the exact solved footprint while
+   still allowing free hand-panning inside it — the render can never leave the
+   viewport edges, at any pitch, at any zoom. */
+let guarding = false;
+function guard(){
+  if (guarding){
+    const s = SCENES[idx];
+    const y = viewer.getYaw(), p = viewer.getPitch();
+    if      (y >  pan.dy + 1e-3) viewer.setYaw( pan.dy, false);
+    else if (y < -pan.dy - 1e-3) viewer.setYaw(-pan.dy, false);
+    const hi = s.vOffset + pan.up, lo = s.vOffset - pan.dn;
+    if      (p > hi + 1e-3) viewer.setPitch(hi, false);
+    else if (p < lo - 1e-3) viewer.setPitch(lo, false);
+  }
+  requestAnimationFrame(guard);
+}
+requestAnimationFrame(guard);
+
+viewer.on("load", ()=>{ applyBounds(true); guarding = true; slideIn(); });
 viewer.on("zoomchange", ()=>requestAnimationFrame(()=>applyBounds(false)));
 addEventListener("resize", ()=>requestAnimationFrame(()=>applyBounds(false)));
 addEventListener("orientationchange", ()=>setTimeout(()=>applyBounds(true), 350));
